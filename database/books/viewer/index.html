@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Booklyst catalog</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="viewer.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1 class="visually-hidden">Booklyst catalog</h1>
+
+      <section class="overview" aria-label="Catalog summary">
+        <div class="stat-card stat-books">
+          <span class="stat-label">Books</span>
+          <strong class="stat-value" id="book-count">—</strong>
+        </div>
+        <div class="stat-card stat-genres">
+          <span class="stat-label">Genres</span>
+          <strong class="stat-value" id="genre-count">—</strong>
+          <span class="genre-list" id="genre-list"></span>
+        </div>
+        <div class="stat-card stat-years">
+          <span class="stat-label">Year range</span>
+          <strong class="stat-value" id="year-range">—</strong>
+        </div>
+      </section>
+
+      <section class="toolbar" aria-label="Catalog filters">
+        <input
+          id="search"
+          type="search"
+          placeholder="Search title, author, ISBN, publisher, or subject"
+          aria-label="Search books"
+          autocomplete="off"
+        >
+        <select id="genre" aria-label="Filter by genre">
+          <option value="">All genres</option>
+        </select>
+        <select id="language" aria-label="Filter by language">
+          <option value="">All languages</option>
+        </select>
+        <div class="year-range">
+          <input
+            id="year-from"
+            type="number"
+            inputmode="numeric"
+            placeholder="From year"
+            aria-label="Minimum publication year"
+          >
+          <span>to</span>
+          <input
+            id="year-to"
+            type="number"
+            inputmode="numeric"
+            placeholder="To year"
+            aria-label="Maximum publication year"
+          >
+        </div>
+        <button id="reset" type="button">Clear filters</button>
+      </section>
+
+      <section aria-label="Book catalog">
+        <div class="summary">
+          <div id="result-count">Loading catalog.</div>
+          <div>Select a row for details.</div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th aria-label="Cover"></th>
+                <th>
+                  <button class="sort-button" data-sort="title" data-label="Title" type="button">
+                    Title
+                  </button>
+                </th>
+                <th>
+                  <button class="sort-button" data-sort="author" data-label="Author" type="button">
+                    Author
+                  </button>
+                </th>
+                <th>
+                  <button class="sort-button" data-sort="year" data-label="Year" type="button">
+                    Year
+                  </button>
+                </th>
+                <th>
+                  <button class="sort-button" data-sort="genre" data-label="Genre" type="button">
+                    Genre
+                  </button>
+                </th>
+                <th>
+                  <button class="sort-button" data-sort="publisher" data-label="Publisher" type="button">
+                    Publisher
+                  </button>
+                </th>
+                <th>
+                  <button class="sort-button" data-sort="language" data-label="Language" type="button">
+                    Language
+                  </button>
+                </th>
+                <th>
+                  <button class="sort-button" data-sort="isbn" data-label="ISBN" type="button">
+                    ISBN
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="book-rows"></tbody>
+          </table>
+          <div class="empty" id="empty" hidden>
+            No books found. Try another search or clear the filters.
+          </div>
+        </div>
+
+        <div class="pager">
+          <div id="page-count">—</div>
+          <div class="pager-controls">
+            <button id="previous" type="button">Previous</button>
+            <button id="next" type="button">Next</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="overlay" id="overlay" role="presentation">
+      <section
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="detail-title"
+      >
+        <div class="dialog-top">
+          <button id="close" class="close" type="button">Close</button>
+        </div>
+        <div class="detail" id="detail"></div>
+      </section>
+    </div>
+  </body>
+</html>

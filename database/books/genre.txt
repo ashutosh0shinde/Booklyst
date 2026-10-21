@@ -1,0 +1,22 @@
+    genre_words = [
+        "Fiction",
+        "Fantasy",
+        "Science Fiction",
+        "Mystery",
+        "Horror",
+        "Romance",
+        "Thriller",
+        "Adventure",
+        "Biography",
+        "History",
+        "Poetry",
+        "Drama",
+        "Comedy",
+        "Crime",
+        "Philosophy",
+        "Psychology",
+        "Religion",
+        "Science",
+        "Technology",
+        "Mythology"
+    ]
