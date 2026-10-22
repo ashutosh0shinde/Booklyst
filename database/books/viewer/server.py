@@ -15,17 +15,6 @@ CSV_PATH = VIEWER_PATH.parent / "books_catalog.csv"
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("BOOKS_PORT", "8000"))
 
-SORT_FIELDS = {
-    "id": ("book_id", int),
-    "title": ("title", str.casefold),
-    "author": ("author_name", str.casefold),
-    "year": ("publication_year", int),
-    "genre": ("genre", str.casefold),
-    "publisher": ("publisher_name", str.casefold),
-    "language": ("language", str.casefold),
-    "isbn": ("isbn", str.casefold),
-}
-
 STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/index.html": ("index.html", "text/html; charset=utf-8"),
@@ -68,6 +57,7 @@ def build_metadata(books: list[dict[str, str]]) -> dict[str, object]:
         key=str.casefold,
     )
     return {
+        "columns": list(books[0].keys()) if books else [],
         "total": len(books),
         "genres": genres,
         "languages": languages,
@@ -77,14 +67,15 @@ def build_metadata(books: list[dict[str, str]]) -> dict[str, object]:
 
 
 def sort_value(book: dict[str, str], field: str) -> str | int | None:
-    column, converter = SORT_FIELDS[field]
-    value = book.get(column, "")
+    value = book.get(field, "")
     if not value:
         return None
-    try:
-        return converter(value)
-    except (TypeError, ValueError):
-        return None
+    if field in {"book_id", "publication_year", "page_count"}:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+    return value.casefold()
 
 
 if not CSV_PATH.is_file():
@@ -187,7 +178,7 @@ class CatalogHandler(BaseHTTPRequestHandler):
         year_to = to_int(one("year_to"))
 
         requested_sort = one("sort")
-        sort_field = requested_sort if requested_sort in SORT_FIELDS else None
+        sort_field = requested_sort if BOOKS and requested_sort in BOOKS[0] else None
         descending = one("direction", "asc").lower() == "desc"
         limit = min(max(to_int(one("limit", "40")) or 40, 1), 100)
         offset = max(to_int(one("offset", "0")) or 0, 0)

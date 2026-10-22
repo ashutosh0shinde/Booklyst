@@ -8,6 +8,7 @@ const state = {
   sort: "",
   direction: "asc",
   requestId: 0,
+  columns: [],
 };
 
 const getElement = (id) => document.getElementById(id);
@@ -43,6 +44,7 @@ async function initialize() {
   }
 
   const metadata = await response.json();
+  state.columns = metadata.columns || [];
   getElement("book-count").textContent = Number(metadata.total).toLocaleString();
 
   const genreCount = metadata.genres.length;
@@ -134,30 +136,41 @@ async function loadBooks() {
 }
 
 function renderSortHeaders() {
-  document.querySelectorAll(".sort-button").forEach((button) => {
-    const isActive = state.sort === button.dataset.sort;
-    const label = button.dataset.label;
-    const arrow =
-      state.direction === "asc" ? " ↑" : " ↓";
+  const headerRow = getElement("column-headers");
+  const headers = ['<th aria-label="Cover"></th>'];
 
-    button.textContent = label + (isActive ? arrow : "");
-    button.setAttribute(
-      "aria-label",
-      label +
-        (isActive
-          ? state.direction === "asc"
-            ? ", ascending"
-            : ", descending"
-          : ", sort")
+  for (const column of state.columns) {
+    const isActive = state.sort === column;
+    const arrow = isActive ? (state.direction === "asc" ? " ↑" : " ↓") : "";
+    const label = column === "cover_url" ? "Cover link" : column.replaceAll("_", " ");
+    headers.push(
+      '<th aria-sort="' +
+        (isActive ? (state.direction === "asc" ? "ascending" : "descending") : "none") +
+        '"><button class="sort-button" data-sort="' +
+        escapeHtml(column) +
+        '" type="button" aria-label="Sort by ' +
+        escapeHtml(label) +
+        '">' +
+        escapeHtml(label) +
+        arrow +
+        "</button></th>"
     );
-    button.closest("th").setAttribute(
-      "aria-sort",
-      isActive
-        ? state.direction === "asc"
-          ? "ascending"
-          : "descending"
-        : "none"
-    );
+  }
+
+  headerRow.innerHTML = headers.join("");
+  headerRow.querySelectorAll(".sort-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const field = button.dataset.sort;
+      if (state.sort === field) {
+        state.direction = state.direction === "asc" ? "desc" : "asc";
+      } else {
+        state.sort = field;
+        state.direction = "asc";
+      }
+      state.offset = 0;
+      renderSortHeaders();
+      loadBooks();
+    });
   });
 }
 
@@ -174,37 +187,69 @@ function coverMarkup(book) {
   );
 }
 
+
+async function copyText(value) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const field = document.createElement("textarea");
+  field.value = value;
+  field.style.position = "fixed";
+  field.style.opacity = "0";
+  document.body.appendChild(field);
+  field.select();
+  const copied = document.execCommand("copy");
+  field.remove();
+  if (!copied) {
+    throw new Error("Clipboard copy was rejected.");
+  }
+}
+
 function renderRows(books) {
   const rows = books
-    .map(
-      (book) =>
-        "<tr>" +
-        "<td>" +
-        coverMarkup(book) +
-        "</td>" +
-        '<td class="book-title">' +
-        escapeHtml(book.title) +
-        "</td>" +
-        '<td class="author-cell">' +
-        escapeHtml(book.author_name || "Author not listed") +
-        "</td>" +
-        "<td>" +
-        escapeHtml(book.publication_year || "—") +
-        "</td>" +
-        "<td>" +
-        escapeHtml(book.genre || "—") +
-        "</td>" +
-        '<td class="publisher-cell">' +
-        escapeHtml(book.publisher_name || "—") +
-        "</td>" +
-        "<td>" +
-        escapeHtml(book.language || "—") +
-        "</td>" +
-        "<td>" +
-        escapeHtml(book.isbn || "—") +
-        "</td>" +
-        "</tr>"
-    )
+    .map((book) => {
+      const cells = ['<td>' + coverMarkup(book) + "</td>"];
+      for (const column of state.columns) {
+        const value = book[column] || "—";
+        if (column === "cover_url" && value !== "—") {
+          const url = safeCoverUrl(value);
+          cells.push(
+            '<td class="url-cell">' +
+              (url
+                ? '<button class="copy-cover-url" type="button" data-copy-url="' +
+                  escapeHtml(url) +
+                  '" aria-label="Copy cover URL">Copy</button>'
+                : "—") +
+              "</td>"
+          );
+        } else {
+          const cellClasses = {
+            book_id: "number-cell",
+            isbn: "isbn-cell",
+            title: "book-title",
+            publication_year: "year-cell",
+            author_name: "author-cell",
+            publisher_name: "publisher-cell",
+            description: "long-cell",
+            genre: "genre-cell",
+            keywords: "long-cell",
+            page_count: "number-cell",
+            language: "language-cell",
+          };
+          const className = cellClasses[column] || "";
+          cells.push(
+            "<td" +
+              (className ? ' class="' + className + '"' : "") +
+              ">" +
+              escapeHtml(value) +
+              "</td>"
+          );
+        }
+      }
+      return "<tr>" + cells.join("") + "</tr>";
+    })
     .join("");
 
   const body = getElement("book-rows");
@@ -219,8 +264,30 @@ function renderRows(books) {
     });
   });
 
+  body.querySelectorAll(".copy-cover-url").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const originalLabel = button.textContent;
+      try {
+        await copyText(button.dataset.copyUrl);
+        button.textContent = "Copied";
+        window.setTimeout(() => {
+          button.textContent = originalLabel;
+        }, 1200);
+      } catch {
+        button.textContent = "Copy failed";
+        window.setTimeout(() => {
+          button.textContent = originalLabel;
+        }, 1500);
+      }
+    });
+  });
+
   body.querySelectorAll("tr").forEach((row, index) => {
-    row.addEventListener("click", () => showDetails(books[index]));
+    row.addEventListener("click", (event) => {
+      if (event.target.closest("button")) return;
+      showDetails(books[index]);
+    });
   });
 }
 
@@ -293,21 +360,6 @@ function scheduleSearch() {
   state.searchTimer = setTimeout(loadBooks, 180);
 }
 
-document.querySelectorAll(".sort-button").forEach((button) => {
-  button.addEventListener("click", () => {
-    const field = button.dataset.sort;
-    if (state.sort === field) {
-      state.direction = state.direction === "asc" ? "desc" : "asc";
-    } else {
-      state.sort = field;
-      state.direction = "asc";
-    }
-
-    state.offset = 0;
-    renderSortHeaders();
-    loadBooks();
-  });
-});
 
 ["search", "genre", "language", "year-from", "year-to"].forEach((id) => {
   const eventName = id === "search" ? "input" : "change";
