@@ -66,13 +66,18 @@ def build_metadata(books: list[dict[str, str]]) -> dict[str, object]:
     }
 
 
-def sort_value(book: dict[str, str], field: str) -> str | int | None:
+def sort_value(book: dict[str, str], field: str) -> str | int | float | None:
     value = book.get(field, "")
     if not value:
         return None
-    if field in {"book_id", "publication_year", "page_count"}:
+    if field in {"book_id", "publication_year", "page_count", "popularity_count"}:
         try:
             return int(value)
+        except (TypeError, ValueError):
+            return None
+    if field == "avg_rating_10":
+        try:
+            return float(value)
         except (TypeError, ValueError):
             return None
     return value.casefold()
@@ -192,6 +197,8 @@ class CatalogHandler(BaseHTTPRequestHandler):
             "description",
             "genre",
             "keywords",
+            "avg_rating_10",
+            "popularity_count",
         )
 
         for book in BOOKS:

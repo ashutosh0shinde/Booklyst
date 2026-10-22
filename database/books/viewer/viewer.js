@@ -237,13 +237,19 @@ function renderRows(books) {
             keywords: "long-cell",
             page_count: "number-cell",
             language: "language-cell",
+            avg_rating_10: "number-cell",
+            popularity_count: "number-cell",
           };
           const className = cellClasses[column] || "";
+          const displayValue =
+            column === "popularity_count" && value !== "—"
+              ? Number(value).toLocaleString()
+              : value;
           cells.push(
             "<td" +
               (className ? ' class="' + className + '"' : "") +
               ">" +
-              escapeHtml(value) +
+              escapeHtml(displayValue) +
               "</td>"
           );
         }
